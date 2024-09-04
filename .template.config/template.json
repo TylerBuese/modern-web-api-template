@@ -1,0 +1,46 @@
+{
+  "tags": { "language": "C#", "type": "project" },
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Tyler Buese",
+  "classifications": ["Common", "WebApi"],
+  "identity": "Modern.Web.Api",
+  "name": "Modern Web API Template",
+  "shortName": "min-api",
+  "sourceName": "ModernApiTemplate",
+  "preferNameDirectory": true,
+  "symbols": {
+    "httpport": {
+      "type": "generated",
+      "generator": "port",
+      "parameters": {
+        "low": 1024,
+        "high": 10000
+      },
+      "replaces": "httpport"
+    },
+    "httpsport": {
+      "type": "generated",
+      "generator": "port",
+      "parameters": {
+        "low": 1024,
+        "high": 10000
+      },
+      "replaces": "httpsport"
+    },
+    "database_connection_string": {
+      "type": "parameter",
+      "replaces": "{{database_string}}",
+      "description": "Enter the Postgres database connection string.",
+      "displayName": "Database Connection String"
+    },
+    "proj-name": {
+      "type": "parameter",
+      "isRequired": true,
+      "replaces": "template",
+      "fileRename": "template",
+      "description": "The project name.",
+      "enableQuotelessLiterals": true
+    }
+  }
+}
+
