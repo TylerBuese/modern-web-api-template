@@ -10,11 +10,10 @@ public class templateEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapGet("/", async (/*,[FromServices] IAuthorService authorService*/) =>
+        app.MapGet("/", async () =>
         {
             return "Hello, world! 👋";
         });
 
-        // app.MapGet("/", ([FromQuery] string query) => $"Hello there!").MapToApiVersion(2);
     }
 }

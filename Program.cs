@@ -1,7 +1,4 @@
 using System.Text.Json.Serialization;
-using template.DI;
-using template.Models;
-using template.Service;
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +7,14 @@ using Microsoft.EntityFrameworkCore;
 using Serilog.Sinks.PostgreSQL;
 using NpgsqlTypes;
 using Serilog;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.Security.Claims;
+using template.Service;
 using template.Errors;
+using template.DI;
+using template.Models;
 
 var CorsName = "CorsAllow";
 
@@ -32,6 +36,50 @@ builder.Services.AddCors(options =>
 	  .Build()
    );
 });
+
+builder.Services.AddAuthentication(options =>
+{
+	options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+	options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+	options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(options =>
+{
+	options.Authority = builder.Configuration["Jwt:Authority"];
+	options.TokenValidationParameters = new TokenValidationParameters
+	{
+		ValidIssuer = builder.Configuration["Jwt:Issuer"],
+		ValidAudience = builder.Configuration["Jwt:Audience"],
+		IssuerSigningKey = new SymmetricSecurityKey
+		(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
+		ValidateIssuer = false,
+		ValidateAudience = false,
+		ValidateLifetime = true,
+		ValidateIssuerSigningKey = true,
+	};
+
+
+	//Uncomment this section to enable cookie authentication
+	options.Events = new JwtBearerEvents
+	{
+		OnTokenValidated = context =>
+		{
+			var claimsIdentity = context.Principal.Identity as ClaimsIdentity;
+
+			// Map the "sub" claim to the Name claim type
+
+			var name = claimsIdentity?.FindFirst(ClaimTypes.NameIdentifier);
+			var email = claimsIdentity?.FindFirst(ClaimTypes.Email);
+			if (name != null)
+			{
+				claimsIdentity.AddClaims([new Claim(ClaimTypes.Email, email.Value), new Claim(ClaimTypes.Name, name.Value)]);
+			}
+
+			return Task.CompletedTask;
+		}
+	};
+});
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddApiVersioning(options =>
 	{
@@ -66,7 +114,8 @@ builder.Services.AddRateLimiter(options =>
 		});
 	});
 
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+
 
 IDictionary<string, ColumnWriterBase> columnWriters = new Dictionary<string, ColumnWriterBase>
 {
@@ -82,7 +131,6 @@ var logger = new LoggerConfiguration()
 		.Enrich.FromLogContext()
 		.Enrich.WithClientIp()
 		.WriteTo.PostgreSQL(builder.Configuration.GetValue<String>("ConnectionStrings:database"), "request_log", columnWriters, needAutoCreateTable: true)
-		.WriteTo.File("./log", rollingInterval: RollingInterval.Day)
 		.CreateLogger();
 
 Serilog.Debugging.SelfLog.Enable(msg => Console.WriteLine(msg));
@@ -108,6 +156,10 @@ RouteGroupBuilder versionedGroup = app
 	.WithApiVersionSet(apiVersionSet);
 
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+
+app.UseAuthorization();
 
 app.UseCors(CorsName);
 
